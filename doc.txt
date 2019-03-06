@@ -1,0 +1,15 @@
+select-file n <name>
+select-file id <id>
+
+read-binary <offset> <readlen> [id <id>]
+
+update-binary <offset> [id <id>] <data>
+
+read-record <readlen>
+update-record <regnum> <data>
+append-record <data>
+
+create-file df <fileinfo> <name>
+create-file ef <fileinfo>
+
+get-response <bites>
