@@ -2,6 +2,7 @@
 # Author: Oier Saizar
 import subprocess as sp
 from sys import getsizeof
+import crypto as c
 
 EXECUTE = False
 
@@ -237,6 +238,44 @@ def get_response(cmd):
 
     return command.toString()
 
+def internal_authenticate(cmd):
+    command = Command()
+    cmd = cmd.split(" ")
+    option = cmd[1]
+
+    command.cla = "00"
+    command.ins = "88"
+    command.p1 = "00"
+
+    if option == "local":
+        command.p2 = "80"
+    else: # global
+        command.p2 = "00"
+
+    rn = c.get_rn()
+    print ("Sending RN : "+str(rn))
+    command.lc = "08"
+    command.datos = rn
+    command.le = "0A"
+
+    return command.toString()
+
+def check_rn(cmd):
+    command = Command()
+    cmd = cmd.split(" ")
+    rn = ' '.join(c for c in cmd[1:9])
+    nt = ' '.join(c for c in cmd[9:11])
+    rnc = ' '.join(c for c in cmd[11:19])
+
+    return str(c.check_rnc(nt, rnc, rn))
+
+def get_sk(cmd):
+    command = Command()
+    cmd = cmd.split(" ")
+    nt = ' '.join(c for c in cmd[1:3])
+    return c.get_sk(nt)
+
+
 def print_help():
     help = """
     select-file n <name>
@@ -254,6 +293,11 @@ def print_help():
     create-file ef <fileinfo>
 
     get-response <bites>
+
+    internal-authenticate local
+    internal-authenticate global
+
+    check-rn <rn> <response>
     """
     print (help)
 
@@ -282,6 +326,10 @@ def main():
                 cmd = get_response(cmd)
             elif "internal-authenticate" in cmd:
                 cmd = internal_authenticate(cmd)
+            elif "check-rn" in cmd:
+                cmd = check_rn(cmd)
+            elif "get-sk" in cmd:
+                cmd = get_sk(cmd)
             elif "help" in cmd:
                 print_help()
 

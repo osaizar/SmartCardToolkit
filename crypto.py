@@ -4,14 +4,15 @@ from Crypto import Random
 from operator import xor
 
 random = Random.new() # random number generator
+IV = bytes.fromhex("0000000000000000")
 
 # Help Functions
 def hex_string_to_int(hxs):
     hxs = hxs.replace(" ", "")
     return int(hxs, 16)
 
-def ntf_to_nt(ntf):
-    nt = hex_string_to_int(ntf)
+def nt_to_ntf(ntf):
+    nt = hex_string_to_int(ntf) + 1
     nt = "%x" % int(nt)
     if len(nt) % 2 == 1:
         nt = "0"+nt
@@ -20,47 +21,57 @@ def ntf_to_nt(ntf):
     nt = ("00 "*l)+nt
     return nt
 
-def mask_NT(nt):
+def mask_nt(nt):
     nt = "00 00 00 "+nt+" 00 00 00" # ??
     nt = nt.replace(" ", "")
     return bytes.fromhex(nt)
 
 # Handshake 1, send nonce
-def get_RN(l=8):
-    hx = random.read(l)
+def get_rn(l=8):
+    hx = random.read(l).hex()
     if len(hx) % 2 == 1:
         hx = "0"+hx
     rt = ' '.join(a+b for a,b in zip(hx[::2], hx[1::2]))
     return rt
 
-# Handshake 2, check RNCt
-def check_RNCt(NTf, RNCt, RN, MK="MASTERADMKEY_005"):
-    mk = MK.encode("ascii")
-    mk1 = mk[:8]
-    mk2 = mk[8:]
-    nt = ntf_to_nt(NTf)
-    nt = mask_NT(nt)
-    des1 = DES3.new(mk1+mk2, DES3.MODE_CBC, "0"*8)
-    des2 = DES3.new(mk2+mk1, DES3.MODE_CBC, "0"*8)
-    skt = des1.encrypt(nt) + des2.encrypt(nt)
+# Handshake 2, check rnc
+def check_rnc(nt, rnc, rn, mk="MASTERADMKEY_005"):
+    mk1 = mk[:8].encode("ascii")
+    mk2 = mk[8:].encode("ascii")
 
-    dest = DES3.new(skt, DES3.MODE_CBC, "0"*8)
-    hRN = bytes.fromhex(RN)
-    hRNCt = bytes.fromhex(RNCt)
-    hRN = dest.encrypt(hRN)
-    print("[DEBUG] rnc_new: "+str(hRN))
-    print("[DEBUG] rnct: "+str(hRNCt))
-    return bool(hRN == hRNCt)
+    ntf = nt_to_ntf(nt)
+    ntf = mask_nt(ntf)
+
+    des1 = DES3.new(mk1+mk2, DES3.MODE_CBC, IV)
+    des2 = DES3.new(mk2+mk1, DES3.MODE_CBC, IV)
+
+    skt = des1.encrypt(ntf).hex() + des2.encrypt(ntf).hex()
+    skt = bytes.fromhex(skt)
+
+    dest = DES3.new(skt, DES3.MODE_CBC, IV)
+
+    rn = bytes.fromhex(rn)
+    new_rnc = dest.encrypt(rn)
+
+    rnc = bytes.fromhex(rnc)
+
+    print("[DEBUG] new_rnc: "+str(new_rnc.hex()))
+    print("[DEBUG] old_rnc: "+str(rnc.hex()))
+
+    return bool(new_rnc == rnc)
 
 
-# Handshake 3, get NTf calculate SK
-def get_SK(NTf, MK="MASTERADMKEY_005"):
-    mk = MK.encode("ascii")
-    mk1 = mk[:8]
-    mk2 = mk[8:]
-    NTf = mask_NT(NTf)
-    des1 = DES3.new(mk1+mk2, DES3.MODE_CBC, "0"*8)
-    des2 = DES3.new(mk2+mk1, DES3.MODE_CBC, "0"*8)
-    sk1 = des1.encrypt(NTf)
-    sk2 = des2.encrypt(NTf)
+# Handshake 3, get ntf calculate sk
+def get_sk(nt, mk="MASTERADMKEY_005"):
+    mk1 = mk[:8].encode("ascii")
+    mk2 = mk[8:].encode("ascii")
+
+    nt = mask_nt(nt)
+
+    des1 = DES3.new(mk1+mk2, DES3.MODE_CBC, IV)
+    des2 = DES3.new(mk2+mk1, DES3.MODE_CBC, IV)
+
+    sk1 = des1.encrypt(nt)
+    sk2 = des2.encrypt(nt)
+
     return sk1.hex()+sk2.hex() # returns in hex
