@@ -217,6 +217,36 @@ def update_record(cmd):
 
     return command.toString()
 
+def sec_update_record(cmd):
+    command = Command()
+    sk = cmd.split(",")[1]
+    cmd = cmd.split(",")[0]
+    cmd = cmd.split(" ")
+
+    command.cla = "00"
+    command.ins = "DC"
+    command.p1 = int_to_hex_str(cmd[1])
+
+    if cmd[2] == "id": # implicit id
+        command.p2 = int_to_hex_str(int('100', 2) + (int(cmd[3], 16)*2)**2) # shiftear 2
+        data = parse_string(''.join(cmd[4:]))
+    else:
+        command.p2 = "04"
+        data = parse_string(''.join(cmd[2:]))
+
+    command.lc = int_to_hex_str(len(data.split(" ")) + 3)
+    command.datos = data
+
+    unauth_command = command.toString()
+
+    s2 = c.sign_command(unauth_command, sk)
+    print("s2: "+s2.hex())
+    sign = int_to_hex_str("0x"+s2[-3:].hex())
+
+    command = unauth_command + " "+sign + " 03" # le 03
+
+    return command
+
 def append_record(cmd):
     command = Command()
     cmd = cmd.split(" ")
@@ -230,6 +260,30 @@ def append_record(cmd):
     command.datos = data
 
     return command.toString()
+
+def sec_append_record(cmd):
+    command = Command()
+    sk = cmd.split(",")[1]
+    cmd = cmd.split(",")[0]
+    cmd = cmd.split(" ")
+    data = parse_string(''.join(cmd[1:]))
+
+    command.cla = "00"
+    command.ins = "E2"
+    command.p1 = "00"
+    command.p2 = "00"
+    command.lc = int_to_hex_str(len(data.split(" ")) + 3)
+    command.datos = data
+
+    unauth_command = command.toString()
+
+    s2 = c.sign_command(unauth_command, sk)
+    print("s2: "+s2.hex())
+    sign = int_to_hex_str("0x"+s2[-3:].hex())
+
+    command = unauth_command + " "+sign + " 03" # le 03
+
+    return command
 
 """
 create file data (file info):
@@ -262,6 +316,38 @@ def create_file(cmd):
         command.datos = data
 
     return command.toString()
+
+def sec_create_file(cmd):
+    command = Command()
+    sk = cmd.split(",")[1]
+    cmd = cmd.split(",")[0]
+    cmd = cmd.split(" ")
+    mode = cmd[1]
+    data = int_to_hex_str(cmd[2]) # file info
+
+    command.cla = "80"
+    command.ins = "E0"
+    command.p1 = "00"
+    command.p2 = "00"
+
+    if mode == "df":
+        name = parse_string(cmd[3])
+        command.lc = int_to_hex_str(len(name.split(" ")) + 3)
+        command.datos = data
+        command.dfname = name
+    else: # mode ef
+        command.lc = "0B"
+        command.datos = data
+
+    unauth_command = command.toString()
+
+    s2 = c.sign_command(unauth_command, sk)
+    print("s2: "+s2.hex())
+    sign = int_to_hex_str("0x"+s2[-3:].hex())
+
+    command = unauth_command + " "+sign + " 03" # le 03
+
+    return command
 
 def get_response(cmd):
     command = Command()
@@ -329,14 +415,14 @@ def print_help():
     create-file df <fileinfo> <name>
     create-file ef <fileinfo>
 
-    get-response <bites>
-
     internal-authenticate local
     internal-authenticate global
 
     check-rn <rn> <response>
 
-    get_sk <nt>
+    get-sk <nt>
+
+    get-response <bites>
     """
     print (help)
 
@@ -357,10 +443,16 @@ def main():
                 cmd = update_binary(cmd)
             elif "read-record" in cmd:
                 cmd = read_record(cmd)
+            elif "sec-update-record" in cmd:
+                cmd = sec_update_record(cmd)
             elif "update-record" in cmd:
                 cmd = update_record(cmd)
+            elif "sec-append-record" in cmd:
+                cmd = sec_append_record(cmd)
             elif "append-record" in cmd:
                 cmd = append_record(cmd)
+            elif "sec-create-file" in cmd:
+                cmd = sec_create_file(cmd)
             elif "create-file" in cmd:
                 cmd = create_file(cmd)
             elif "get-response" in cmd:
