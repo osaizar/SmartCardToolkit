@@ -12,7 +12,7 @@ def hex_string_to_int(hxs):
     return int(hxs, 16)
 
 def nt_to_ntf(ntf):
-    nt = hex_string_to_int(ntf) + 1
+    nt = hex_string_to_int(ntf) - 1
     nt = "%x" % int(nt)
     if len(nt) % 2 == 1:
         nt = "0"+nt
@@ -25,6 +25,18 @@ def mask_nt(nt):
     nt = "00 00 00 "+nt+" 00 00 00" # ??
     nt = nt.replace(" ", "")
     return bytes.fromhex(nt)
+
+def xor(var1, var2):
+    encrypted = [ a ^ b for (a,b) in zip(var1, var2) ]
+    str = ""
+    for e in encrypted:
+        hx = hex(e)
+        str = str + hx[2:]
+
+    str = (16 - len(str))*"0"+str
+
+    bt = bytes.fromhex(str)
+    return bt
 
 # Handshake 1, send nonce
 def get_rn(l=8):
@@ -75,3 +87,27 @@ def get_sk(nt, mk="MASTERADMKEY_005"):
     sk2 = des2.encrypt(nt)
 
     return sk1.hex()+sk2.hex() # returns in hex
+
+
+def sign_command(cmd, sk):
+    cmd = bytes.fromhex(cmd)
+    sk = bytes.fromhex(sk)
+
+    # Add padding if neccessary
+    cmd = [cmd[i:i+8] for i in range(0, len(cmd), 8)]
+    scmd = cmd[-1].hex()
+    scmd += "0"*(16-len(scmd))
+    print (scmd)
+    cmd[-1] = bytes.fromhex(scmd)
+
+    # calculate s2
+    cb = DES.new(sk[:8], DES.MODE_CBC, IV).encrypt(cmd[0])
+
+    for c in cmd[1:-1]:
+        xored = xor(cb, c)
+        cb = DES.new(sk[:8], DES.MODE_CBC, IV).encrypt(xored)
+
+    xored = xor(cmd[-1], cb)
+    s2 = DES3.new(sk, DES3.MODE_CBC, IV).encrypt(xored)
+
+    return s2

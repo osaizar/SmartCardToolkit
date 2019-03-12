@@ -17,6 +17,7 @@ class Command():
         self.datos = ""
         self.le = ""
         self.dfname = ""
+        self.s2 = ""
 
     def toString(self):
         rt = ""
@@ -32,6 +33,8 @@ class Command():
             rt += self.lc+" "
         if self.datos != "":
             rt += self.datos+" "
+        if self.s2 != "":
+            rt += self.s2+" "
         if self.le != "":
             rt += self.le+" "
         if self.dfname != "":
@@ -142,6 +145,40 @@ def update_binary(cmd):
     command.le = "00"
 
     return command.toString()
+
+def sec_update_binary(cmd):
+    command = Command()
+    sk = cmd.split(",")[1]
+    cmd = cmd.split(",")[0]
+    cmd = cmd.split(" ")
+
+    command.cla = "04"
+    command.ins = "D6"
+
+
+    if cmd[2] == "id": # implicit id
+        command.p1 = int_to_hex_str(int('10000000', 2) + int(cmd[3], 16))
+        command.p2 = int_to_hex_str(cmd[1])
+        data = parse_string(''.join(cmd[4:]))
+    else:
+        offset = int_to_hex_str(cmd[1], bytelength=2).split(" ")
+        command.p2 = offset[0]
+        command.p1 = offset[1]
+        data = parse_string(''.join(cmd[2:]))
+
+
+    command.lc = int_to_hex_str(len(data.split(" ")) + 3)
+    command.datos = data
+
+    unauth_command = command.toString()
+
+    s2 = c.sign_command(unauth_command, sk)
+    print("s2: "+s2.hex())
+    sign = int_to_hex_str("0x"+s2[-3:].hex())
+
+    command = unauth_command + " "+sign + " 03" # le 03
+
+    return command
 
 def read_record(cmd): # TODO: add id
     command = Command()
@@ -298,6 +335,8 @@ def print_help():
     internal-authenticate global
 
     check-rn <rn> <response>
+
+    get_sk <nt>
     """
     print (help)
 
@@ -312,6 +351,8 @@ def main():
                 cmd = select_file(cmd)
             elif "read-binary" in cmd:
                 cmd = read_binary(cmd)
+            elif "sec-update-binary" in cmd:
+                cmd = sec_update_binary(cmd)
             elif "update-binary" in cmd:
                 cmd = update_binary(cmd)
             elif "read-record" in cmd:
