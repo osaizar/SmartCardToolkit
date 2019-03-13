@@ -5,6 +5,8 @@ from operator import xor
 
 random = Random.new() # random number generator
 IV = bytes.fromhex("0000000000000000")
+# MK = "MASTERADMKEY_005".encode("ascii")
+MK = bytes.fromhex("01010101010101010101010101010101")
 
 # Help Functions
 def hex_string_to_int(hxs):
@@ -47,9 +49,9 @@ def get_rn(l=8):
     return rt
 
 # Handshake 2, check rnc
-def check_rnc(nt, rnc, rn, mk="MASTERADMKEY_005"):
-    mk1 = mk[:8].encode("ascii")
-    mk2 = mk[8:].encode("ascii")
+def check_rnc(nt, rnc, rn, mk=MK):
+    mk1 = mk[:8]
+    mk2 = mk[8:]
 
     ntf = nt_to_ntf(nt)
     ntf = mask_nt(ntf)
@@ -67,16 +69,16 @@ def check_rnc(nt, rnc, rn, mk="MASTERADMKEY_005"):
 
     rnc = bytes.fromhex(rnc)
 
-    print("[DEBUG] new_rnc: "+str(new_rnc.hex()))
-    print("[DEBUG] old_rnc: "+str(rnc.hex()))
+    print("new_rnc: "+str(new_rnc.hex()))
+    print("old_rnc: "+str(rnc.hex()))
 
     return bool(new_rnc == rnc)
 
 
 # Handshake 3, get ntf calculate sk
-def get_sk(nt, mk="MASTERADMKEY_005"):
-    mk1 = mk[:8].encode("ascii")
-    mk2 = mk[8:].encode("ascii")
+def get_sk(nt, mk=MK):
+    mk1 = mk[:8]
+    mk2 = mk[8:]
 
     nt = mask_nt(nt)
 
@@ -97,7 +99,6 @@ def sign_command(cmd, sk):
     cmd = [cmd[i:i+8] for i in range(0, len(cmd), 8)]
     scmd = cmd[-1].hex()
     scmd += "0"*(16-len(scmd))
-    print (scmd)
     cmd[-1] = bytes.fromhex(scmd)
 
     # calculate s2
@@ -111,3 +112,19 @@ def sign_command(cmd, sk):
     s2 = DES3.new(sk, DES3.MODE_CBC, IV).encrypt(xored)
 
     return s2
+
+def encrypt_data(data, sk):
+    data = bytes.fromhex(data).hex()
+    sk = bytes.fromhex(sk)
+
+    padd = 16 - (len(data) % 16)
+
+    if padd == 16:
+        padd = 0
+
+    data = data + "0" * padd
+
+    data = bytes.fromhex(data)
+    edata = DES3.new(sk, DES3.MODE_CBC, IV).encrypt(data)
+
+    return edata.hex()
