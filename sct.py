@@ -423,6 +423,8 @@ def print_help():
     get-sk <nt>
 
     get-response <bites>
+
+    sec-<command> <arguments>,<sk>
     """
     print (help)
 
