@@ -432,30 +432,31 @@ class Prompt(Cmd):
 
     def do_help(self, cmd):
         help = """
-        select-file n <name>
-        select-file id <id>
+        select_file n <name>
+        select_file id <id>
 
         read-binary <offset> <readlen> [id <id>]
 
-        update-binary <offset> [id <id>] <data>
+        update_binary <offset> [id <id>] <data>
 
-        read-record <readlen>
-        update-record <regnum> [id <id>] <data>
-        append-record <data>
+        read_record <readlen>
+        update_record <regnum> [id <id>] <data>
+        append_record <data>
 
-        create-file df <fileinfo> <name>
-        create-file ef <fileinfo>
+        create_file df <fileinfo> <name>
+        create_file ef <fileinfo>
 
-        internal-authenticate local
-        internal-authenticate global
+        internal_authenticate local
+        internal_authenticate global
 
-        check-rn <rn> <response>
+        check_rn <rn> <response>
 
-        get-sk <nt>
+        get_sk <nt>
 
-        get-response <bites>
+        get_response <bites>
 
-        sec-<command> <arguments>,<sk>
+        sec_<command> <arguments>,<sk>
+        enc_sec_<command> <arguments>,<sk>
         """
         print (help)
 
